@@ -1,7 +1,7 @@
 import Image from "next/image";
 import QRCode from "qrcode";
 import { notFound } from "next/navigation";
-import { requireActor, isOrganizationWide } from "@/auth/access";
+import { requireActor } from "@/auth/access";
 import { AttachmentForm } from "@/components/attachment-form";
 import { ActionForm } from "@/components/action-form";
 import { Shell } from "@/components/shell";
@@ -35,16 +35,6 @@ export default async function AssetDetail({
     },
   });
   if (!asset) notFound();
-  if (
-    !isOrganizationWide(actor) &&
-    asset.owningDepartmentId !== actor.departmentId &&
-    !asset.allocations.some(
-      (allocation) =>
-        allocation.employeeId === actor.employeeId ||
-        allocation.employee?.departmentId === actor.departmentId,
-    )
-  )
-    notFound();
   const qr = await QRCode.toDataURL(
     `${process.env.APP_URL ?? "http://localhost:3000"}/assets/${asset.id}`,
     { margin: 1, width: 220 },

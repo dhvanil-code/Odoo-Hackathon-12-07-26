@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { Pencil } from "lucide-react";
-import { requireActor, isOrganizationWide } from "@/auth/access";
+import { requireActor } from "@/auth/access";
 import { ActionForm } from "@/components/action-form";
 import { Shell } from "@/components/shell";
 import { PageHead, Badge } from "@/components/ui";
@@ -38,22 +38,6 @@ export default async function Assets({
         ? [{ status: filters.status as Prisma.EnumAssetStatusFilter }]
         : [{ status: { not: "DISPOSED" as const } }]),
       ...(filters.category ? [{ categoryId: filters.category }] : []),
-      ...(!isOrganizationWide(actor)
-        ? [
-            {
-              OR: [
-                { owningDepartmentId: actor.departmentId },
-                {
-                  allocations: {
-                    some: actor.roles.includes("DEPARTMENT_HEAD")
-                      ? { employee: { departmentId: actor.departmentId } }
-                      : { employeeId: actor.employeeId },
-                  },
-                },
-              ],
-            },
-          ]
-        : []),
     ],
   };
   const [assets, total, categories, locations, departments] = await Promise.all(

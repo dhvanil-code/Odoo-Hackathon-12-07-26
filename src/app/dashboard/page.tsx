@@ -1,4 +1,3 @@
-import type { Prisma } from "@prisma/client";
 import {
   Boxes,
   PackageCheck,
@@ -8,32 +7,17 @@ import {
   Clock,
   TriangleAlert,
 } from "lucide-react";
-import { requireActor, isOrganizationWide } from "@/auth/access";
+import { requireActor } from "@/auth/access";
 import { Shell } from "@/components/shell";
 import { PageHead, Badge } from "@/components/ui";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 export default async function Dashboard() {
-  const actor = await requireActor();
+  await requireActor();
   const now = new Date();
   const nextWeek = new Date(now);
   nextWeek.setUTCDate(nextWeek.getUTCDate() + 7);
-  const employeeScope: Prisma.EmployeeWhereInput = isOrganizationWide(actor)
-    ? {}
-    : actor.roles.includes("DEPARTMENT_HEAD")
-      ? { departmentId: actor.departmentId }
-      : { id: actor.employeeId };
-  const allocationScope: Prisma.AllocationWhereInput = isOrganizationWide(actor)
-    ? {}
-    : actor.roles.includes("DEPARTMENT_HEAD")
-      ? {
-          OR: [
-            { departmentId: actor.departmentId },
-            { employee: { departmentId: actor.departmentId } },
-          ],
-        }
-      : { employeeId: actor.employeeId };
   const [
     available,
     allocated,
@@ -45,42 +29,28 @@ export default async function Dashboard() {
     activity,
   ] = await Promise.all([
     db.asset.count({
-      where: {
-        status: "AVAILABLE",
-        ...(isOrganizationWide(actor)
-          ? {}
-          : {
-              OR: [
-                { owningDepartmentId: actor.departmentId },
-                { allocations: { some: allocationScope } },
-              ],
-            }),
-      },
+      where: { status: "AVAILABLE" },
     }),
     db.allocation.count({
-      where: { ...allocationScope, status: "ACTIVE", actualReturnDate: null },
+      where: { status: "ACTIVE", actualReturnDate: null },
     }),
     db.maintenanceRequest.count({
       where: {
         status: { in: ["APPROVED", "TECHNICIAN_ASSIGNED", "IN_PROGRESS"] },
-        ...(isOrganizationWide(actor) ? {} : { raisedBy: employeeScope }),
       },
     }),
     db.resourceBooking.count({
       where: {
         status: { in: ["UPCOMING", "ONGOING"] },
-        ...(isOrganizationWide(actor) ? {} : { bookedBy: employeeScope }),
       },
     }),
     db.transferRequest.count({
       where: {
         status: "REQUESTED",
-        ...(isOrganizationWide(actor) ? {} : { requester: employeeScope }),
       },
     }),
     db.allocation.count({
       where: {
-        ...allocationScope,
         status: "ACTIVE",
         expectedReturnDate: {
           gte: now,
@@ -89,7 +59,7 @@ export default async function Dashboard() {
       },
     }),
     db.allocation.count({
-      where: { ...allocationScope, status: "ACTIVE", overdue: true },
+      where: { status: "ACTIVE", overdue: true },
     }),
     db.activityLog.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
   ]);
