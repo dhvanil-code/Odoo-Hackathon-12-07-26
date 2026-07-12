@@ -29,10 +29,40 @@ export default async function Maintenance() {
     }),
     db.asset.findMany({
       where: isOrganizationWide(actor)
-        ? { status: { notIn: ["LOST", "RETIRED", "DISPOSED"] } }
+        ? {
+            status: { notIn: ["LOST", "RETIRED", "DISPOSED"] },
+            maintenance: {
+              none: {
+                status: {
+                  in: [
+                    "PENDING",
+                    "APPROVED",
+                    "TECHNICIAN_ASSIGNED",
+                    "IN_PROGRESS",
+                  ],
+                },
+              },
+            },
+          }
         : {
             allocations: {
-              some: { status: "ACTIVE", employeeId: actor.employeeId },
+              some: {
+                status: "ACTIVE",
+                actualReturnDate: null,
+                employeeId: actor.employeeId,
+              },
+            },
+            maintenance: {
+              none: {
+                status: {
+                  in: [
+                    "PENDING",
+                    "APPROVED",
+                    "TECHNICIAN_ASSIGNED",
+                    "IN_PROGRESS",
+                  ],
+                },
+              },
             },
           },
       orderBy: { tag: "asc" },
@@ -66,7 +96,7 @@ export default async function Maintenance() {
               fields={[
                 {
                   name: "assetId",
-                  label: "Assigned asset",
+                  label: canManage ? "Asset" : "Your assigned asset",
                   type: "select",
                   required: true,
                   options: assets.map((asset) => ({

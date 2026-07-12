@@ -15,7 +15,8 @@ import {
   Settings,
   Search,
 } from "lucide-react";
-import { auth, signOut } from "@/auth";
+import { auth } from "@/auth";
+import { SignOutButton } from "@/components/sign-out-button";
 
 const nav = [
   [
@@ -112,12 +113,16 @@ export async function Shell({
               <span>{label}</span>
             </Link>
           ))}
-        <div className="sidebar-foot">
+        <Link
+          href="/profile"
+          className="sidebar-foot"
+          aria-label="Open profile"
+        >
           <b style={{ fontSize: 12 }}>{roleLabel}</b>
           <div style={{ fontSize: 10, color: "#a9bcb4", marginTop: 4 }}>
             {session?.user.name ?? "Signed in"}
           </div>
-        </div>
+        </Link>
       </aside>
       <main className="main">
         <header className="topbar">
@@ -129,32 +134,7 @@ export async function Shell({
             <Link href="/notifications" aria-label="Notifications">
               <Bell size={18} />
             </Link>
-            <form
-              action={async () => {
-                "use server";
-                await signOut({ redirectTo: "/login" });
-              }}
-            >
-              <button
-                className="avatar-button"
-                aria-label="Sign out"
-                title="Sign out"
-              >
-                <span
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 10,
-                    background: "#dff36d",
-                    display: "grid",
-                    placeItems: "center",
-                    fontWeight: 900,
-                  }}
-                >
-                  {initials}
-                </span>
-              </button>
-            </form>
+            <SignOutButton initials={initials} />
           </div>
         </header>
         {children}

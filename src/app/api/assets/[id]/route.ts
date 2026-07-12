@@ -18,6 +18,7 @@ const schema = z.object({
   status: z.enum(["AVAILABLE", "LOST", "RETIRED", "DISPOSED"]).optional(),
   reason: z.string().min(5).max(1000),
 });
+const deleteSchema = z.object({ reason: z.string().min(5).max(1000) });
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
@@ -83,6 +84,97 @@ export async function PATCH(
       return result;
     });
     return Response.json(updated);
+  } catch (error) {
+    return jsonError(error);
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
+  try {
+    const actor = await requireActor("assets:write");
+    const { id } = await context.params;
+    const input = deleteSchema.parse(await request.json());
+    const asset = await db.asset.findUniqueOrThrow({ where: { id } });
+    const activeAllocation = await db.allocation.findFirst({
+      where: { assetId: id, status: "ACTIVE", actualReturnDate: null },
+    });
+    if (activeAllocation)
+      throw new DomainError(
+        "ASSET_IN_CUSTODY",
+        "Return or transfer this asset before deleting it.",
+      );
+    const activeMaintenance = await db.maintenanceRequest.findFirst({
+      where: {
+        assetId: id,
+        status: {
+          in: ["PENDING", "APPROVED", "TECHNICIAN_ASSIGNED", "IN_PROGRESS"],
+        },
+      },
+    });
+    if (activeMaintenance)
+      throw new DomainError(
+        "MAINTENANCE_ALREADY_ACTIVE",
+        "Resolve the active maintenance request before deleting this asset.",
+      );
+    if (asset.status === "DISPOSED")
+      throw new DomainError(
+        "ASSET_ALREADY_DELETED",
+        "This asset is already deleted.",
+      );
+    const result = await db.$transaction(async (tx) => {
+      let previousStatus = asset.status;
+      if (asset.status !== "RETIRED") {
+        assertTransition(
+          asset.status,
+          "RETIRED",
+          actor.roles.includes("ADMIN"),
+        );
+        await tx.asset.update({ where: { id }, data: { status: "RETIRED" } });
+        await tx.assetHistory.create({
+          data: {
+            assetId: id,
+            previousStatus,
+            newStatus: "RETIRED",
+            actorId: actor.userId,
+            reason: input.reason,
+            relatedType: "Asset",
+            relatedId: id,
+          },
+        });
+        previousStatus = "RETIRED";
+      }
+      const deleted = await tx.asset.update({
+        where: { id },
+        data: { status: "DISPOSED" },
+      });
+      await tx.assetHistory.create({
+        data: {
+          assetId: id,
+          previousStatus,
+          newStatus: "DISPOSED",
+          actorId: actor.userId,
+          reason: input.reason,
+          relatedType: "Asset",
+          relatedId: id,
+        },
+      });
+      await tx.activityLog.create({
+        data: {
+          actorId: actor.userId,
+          action: "ASSET_DELETED",
+          entityType: "Asset",
+          entityId: id,
+          oldValues: { status: asset.status },
+          newValues: { status: "DISPOSED" },
+          reason: input.reason,
+        },
+      });
+      return deleted;
+    });
+    return Response.json(result);
   } catch (error) {
     return jsonError(error);
   }

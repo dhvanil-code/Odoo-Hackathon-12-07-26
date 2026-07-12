@@ -35,6 +35,22 @@ describe.skipIf(!enabled)("signup security", () => {
     expect(response.status).toBe(201);
     expect((await response.json()).role).toBe("EMPLOYEE");
   });
+  it("accepts a blank optional employee number", async () => {
+    const { POST } = await import("@/app/api/signup/route");
+    const response = await POST(
+      new Request("http://localhost/api/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Optional Number Signup",
+          email: `optional-number-${Date.now()}@assetflow.local`,
+          password: "LongEnoughPassword!",
+          employeeNumber: "",
+        }),
+      }),
+    );
+    expect(response.status).toBe(201);
+  });
   it("returns a conflict instead of a server error for duplicate registration", async () => {
     const { POST } = await import("@/app/api/signup/route");
     const email = `duplicate-${Date.now()}@assetflow.local`;

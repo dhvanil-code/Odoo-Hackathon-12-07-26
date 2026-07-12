@@ -1,14 +1,27 @@
 import { signIn } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-export default function Login() {
+import { AuthError } from "next-auth";
+
+export default async function Login({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
   async function login(formData: FormData) {
     "use server";
-    await signIn("credentials", {
-      email: formData.get("email"),
-      password: formData.get("password"),
-      redirect: false,
-    });
+    try {
+      await signIn("credentials", {
+        email: formData.get("email"),
+        password: formData.get("password"),
+        redirect: false,
+      });
+    } catch (caught) {
+      if (caught instanceof AuthError)
+        redirect("/login?error=invalid-credentials");
+      throw caught;
+    }
     redirect("/dashboard");
   }
   return (
@@ -79,6 +92,11 @@ export default function Login() {
               Sign in securely
             </button>
           </form>
+          {error === "invalid-credentials" && (
+            <p className="form-error" role="alert">
+              We couldn&apos;t sign you in with that email and password.
+            </p>
+          )}
           <div
             className="toolbar"
             style={{ justifyContent: "space-between", marginTop: 16 }}

@@ -32,7 +32,7 @@ export function ActionForm({
   label: string;
   title: string;
   endpoint: string;
-  method?: "POST" | "PATCH";
+  method?: "POST" | "PATCH" | "DELETE";
   fields: FormField[];
   tone?: "primary" | "secondary";
 }) {
@@ -46,6 +46,14 @@ export function ActionForm({
     const body: Record<string, unknown> = {};
     for (const field of fields) {
       const value = formData.get(field.name);
+      if (
+        field.required &&
+        (value === null || (typeof value === "string" && !value.trim()))
+      ) {
+        setMessage(`Please provide ${field.label}.`);
+        setBusy(false);
+        return;
+      }
       if (field.type === "checkbox") body[field.name] = value === "on";
       else if (value !== null && value !== "")
         body[field.name] = field.type === "number" ? Number(value) : value;
@@ -69,6 +77,7 @@ export function ActionForm({
   return (
     <>
       <button
+        type="button"
         className={`btn ${tone === "secondary" ? "secondary" : ""}`}
         onClick={() => setOpen(true)}
       >

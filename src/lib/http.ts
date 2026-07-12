@@ -1,7 +1,18 @@
 import { DomainError } from "@/lib/errors";
 import { Prisma } from "@prisma/client";
+import { z } from "zod";
 
 export function jsonError(error: unknown) {
+  if (error instanceof z.ZodError) {
+    return Response.json(
+      {
+        code: "VALIDATION_ERROR",
+        message: error.issues[0]?.message ?? "Check the submitted fields.",
+        details: error.flatten(),
+      },
+      { status: 400 },
+    );
+  }
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === "P2002") {
       return Response.json(

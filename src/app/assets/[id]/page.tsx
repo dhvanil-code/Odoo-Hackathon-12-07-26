@@ -70,58 +70,80 @@ export default async function AssetDetail({
                 {asset.status.replaceAll("_", " ")}
               </Badge>
               {canWrite && (
-                <ActionForm
-                  label="Update asset"
-                  title={`Update ${asset.tag}`}
-                  endpoint={`/api/assets/${asset.id}`}
-                  method="PATCH"
-                  fields={[
-                    { name: "name", label: "Name", defaultValue: asset.name },
-                    {
-                      name: "condition",
-                      label: "Condition",
-                      type: "select",
-                      defaultValue: asset.condition,
-                      options: [
-                        "NEW",
-                        "EXCELLENT",
-                        "GOOD",
-                        "FAIR",
-                        "DAMAGED",
-                        "UNUSABLE",
-                      ].map((value) => ({ value, label: value })),
-                    },
-                    {
-                      name: "locationId",
-                      label: "Location ID",
-                      defaultValue: asset.locationId,
-                    },
-                    {
-                      name: "manufacturer",
-                      label: "Manufacturer",
-                      defaultValue: asset.manufacturer ?? "",
-                    },
-                    {
-                      name: "model",
-                      label: "Model",
-                      defaultValue: asset.model ?? "",
-                    },
-                    {
-                      name: "status",
-                      label: "Lifecycle action",
-                      type: "select",
-                      options: ["AVAILABLE", "LOST", "RETIRED", "DISPOSED"].map(
-                        (value) => ({ value, label: value }),
-                      ),
-                    },
-                    {
-                      name: "reason",
-                      label: "Reason",
-                      type: "textarea",
-                      required: true,
-                    },
-                  ]}
-                />
+                <>
+                  <ActionForm
+                    label="Update asset"
+                    title={`Update ${asset.tag}`}
+                    endpoint={`/api/assets/${asset.id}`}
+                    method="PATCH"
+                    fields={[
+                      { name: "name", label: "Name", defaultValue: asset.name },
+                      {
+                        name: "condition",
+                        label: "Condition",
+                        type: "select",
+                        defaultValue: asset.condition,
+                        options: [
+                          "NEW",
+                          "EXCELLENT",
+                          "GOOD",
+                          "FAIR",
+                          "DAMAGED",
+                          "UNUSABLE",
+                        ].map((value) => ({ value, label: value })),
+                      },
+                      {
+                        name: "locationId",
+                        label: "Location ID",
+                        defaultValue: asset.locationId,
+                      },
+                      {
+                        name: "manufacturer",
+                        label: "Manufacturer",
+                        defaultValue: asset.manufacturer ?? "",
+                      },
+                      {
+                        name: "model",
+                        label: "Model",
+                        defaultValue: asset.model ?? "",
+                      },
+                      {
+                        name: "status",
+                        label: "Lifecycle action",
+                        type: "select",
+                        options: [
+                          "AVAILABLE",
+                          "LOST",
+                          "RETIRED",
+                          "DISPOSED",
+                        ].map((value) => ({ value, label: value })),
+                      },
+                      {
+                        name: "reason",
+                        label: "Reason",
+                        type: "textarea",
+                        required: true,
+                      },
+                    ]}
+                  />
+                  {asset.status !== "DISPOSED" && (
+                    <ActionForm
+                      label="Delete asset"
+                      title={`Delete ${asset.tag}?`}
+                      endpoint={`/api/assets/${asset.id}`}
+                      method="DELETE"
+                      tone="secondary"
+                      fields={[
+                        {
+                          name: "reason",
+                          label: "Reason for deletion",
+                          type: "textarea",
+                          required: true,
+                        },
+                      ]}
+                    />
+                  )}
+                </>
               )}
             </div>
           }

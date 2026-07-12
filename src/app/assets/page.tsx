@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import Link from "next/link";
+import { Pencil } from "lucide-react";
 import { requireActor, isOrganizationWide } from "@/auth/access";
 import { ActionForm } from "@/components/action-form";
 import { Shell } from "@/components/shell";
@@ -35,7 +36,7 @@ export default async function Assets({
         : []),
       ...(filters.status
         ? [{ status: filters.status as Prisma.EnumAssetStatusFilter }]
-        : []),
+        : [{ status: { not: "DISPOSED" as const } }]),
       ...(filters.category ? [{ categoryId: filters.category }] : []),
       ...(!isOrganizationWide(actor)
         ? [
@@ -228,9 +229,21 @@ export default async function Assets({
                   return (
                     <tr key={asset.id}>
                       <td>
-                        <Link href={`/assets/${asset.id}`}>
-                          <b>{asset.tag}</b>
-                        </Link>
+                        <div className="asset-link-cell">
+                          <Link href={`/assets/${asset.id}`}>
+                            <b>{asset.tag}</b>
+                          </Link>
+                          {canRegister && (
+                            <Link
+                              className="asset-manage-link"
+                              href={`/assets/${asset.id}`}
+                              aria-label={`Manage ${asset.tag}`}
+                              title={`Manage ${asset.tag}`}
+                            >
+                              <Pencil size={14} />
+                            </Link>
+                          )}
+                        </div>
                       </td>
                       <td>{asset.name}</td>
                       <td>{asset.category.name}</td>

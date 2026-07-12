@@ -63,43 +63,76 @@ export default async function Employees() {
                     </td>
                     <td>
                       {admin && (
-                        <ActionForm
-                          label="Change role"
-                          title={`Change access for ${employee.name}`}
-                          endpoint={`/api/employees/${employee.id}/roles`}
-                          fields={[
-                            {
-                              name: "role",
-                              label: "Elevated role",
-                              type: "select",
-                              required: true,
-                              options: [
-                                "ASSET_MANAGER",
-                                "DEPARTMENT_HEAD",
-                                "AUDITOR",
-                              ].map((value) => ({
-                                value,
-                                label: value.replaceAll("_", " "),
-                              })),
-                            },
-                            {
-                              name: "action",
-                              label: "Action",
-                              type: "select",
-                              required: true,
-                              options: [
-                                { value: "ASSIGN", label: "Assign" },
-                                { value: "REMOVE", label: "Remove" },
-                              ],
-                            },
-                            {
-                              name: "reason",
-                              label: "Reason",
-                              type: "textarea",
-                              required: true,
-                            },
-                          ]}
-                        />
+                        <div className="toolbar" style={{ marginBottom: 0 }}>
+                          <ActionForm
+                            label="Change role"
+                            title={`Change access for ${employee.name}`}
+                            endpoint={`/api/employees/${employee.id}/roles`}
+                            fields={[
+                              {
+                                name: "role",
+                                label: "Elevated role",
+                                type: "select",
+                                required: true,
+                                options: [
+                                  "ASSET_MANAGER",
+                                  "DEPARTMENT_HEAD",
+                                  "AUDITOR",
+                                ].map((value) => ({
+                                  value,
+                                  label: value.replaceAll("_", " "),
+                                })),
+                              },
+                              {
+                                name: "action",
+                                label: "Action",
+                                type: "select",
+                                required: true,
+                                options: [
+                                  { value: "ASSIGN", label: "Assign" },
+                                  { value: "REMOVE", label: "Remove" },
+                                ],
+                              },
+                              {
+                                name: "reason",
+                                label: "Reason",
+                                type: "textarea",
+                                required: true,
+                              },
+                            ]}
+                          />
+                          {employee.id !== actor.employeeId &&
+                            employee.status === "ACTIVE" && (
+                              <ActionForm
+                                label="Remove"
+                                title={`Remove ${employee.name}?`}
+                                endpoint={`/api/employees/${employee.id}`}
+                                method="PATCH"
+                                tone="secondary"
+                                fields={[
+                                  {
+                                    name: "status",
+                                    label: "Action",
+                                    type: "select",
+                                    required: true,
+                                    defaultValue: "INACTIVE",
+                                    options: [
+                                      {
+                                        value: "INACTIVE",
+                                        label: "Deactivate employee",
+                                      },
+                                    ],
+                                  },
+                                  {
+                                    name: "reason",
+                                    label: "Reason for removal",
+                                    type: "textarea",
+                                    required: true,
+                                  },
+                                ]}
+                              />
+                            )}
+                        </div>
                       )}
                     </td>
                   </tr>

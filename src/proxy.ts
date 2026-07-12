@@ -7,6 +7,8 @@ const publicPaths = [
   "/reset-password",
   "/api/auth",
   "/api/health",
+  "/api/signup",
+  "/api/password",
 ];
 export default auth((request) => {
   const path = request.nextUrl.pathname;

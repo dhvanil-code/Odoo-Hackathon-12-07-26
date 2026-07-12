@@ -64,11 +64,14 @@ export default async function Organization() {
           }
         />
         <div className="tabs">
-          <div className="tab active">Departments</div>
-          <div className="tab">Asset categories</div>
-          <div className="tab">Employee directory</div>
+          <a className="tab active" href="#departments">
+            Departments
+          </a>
+          <a className="tab" href="#asset-categories">
+            Asset categories
+          </a>
         </div>
-        <section className="card">
+        <section className="card" id="departments">
           <div className="page-head">
             <div>
               <b>Department hierarchy</b>
@@ -109,7 +112,11 @@ export default async function Organization() {
             </tbody>
           </table>
         </section>
-        <section className="card" style={{ marginTop: 16 }}>
+        <section
+          className="card"
+          id="asset-categories"
+          style={{ marginTop: 16, scrollMarginTop: 92 }}
+        >
           <div className="page-head">
             <div>
               <b>Asset categories</b>

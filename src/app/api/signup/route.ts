@@ -10,7 +10,11 @@ const signupSchema = z
     name: z.string().trim().min(2).max(120),
     email: z.string().trim().toLowerCase().pipe(z.email()),
     password: z.string().min(12).max(128),
-    employeeNumber: z.string().trim().min(2).max(50).optional(),
+    employeeNumber: z.preprocess(
+      (value) =>
+        typeof value === "string" && !value.trim() ? undefined : value,
+      z.string().trim().min(2).max(50).optional(),
+    ),
   })
   .strict();
 
