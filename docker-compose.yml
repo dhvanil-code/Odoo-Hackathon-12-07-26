@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: assetflow
+      POSTGRES_PASSWORD: assetflow
+      POSTGRES_DB: assetflow
+      TZ: UTC
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U assetflow -d assetflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+    volumes: ["assetflow_db:/var/lib/postgresql/data"]
+    ports: ["5432:5432"]
+  app:
+    build: .
+    env_file: .env
+    depends_on:
+      db: { condition: service_healthy }
+    command: ["sh", "-c", "pnpm db:deploy && pnpm db:seed && pnpm start"]
+    ports: ["3000:3000"]
+    volumes: ["assetflow_uploads:/app/storage/uploads"]
+  worker:
+    build: .
+    env_file: .env
+    depends_on:
+      db: { condition: service_healthy }
+    command:
+      [
+        "sh",
+        "-c",
+        "while true; do node --import tsx src/jobs/worker.ts; sleep 60; done",
+      ]
+volumes:
+  assetflow_db:
+  assetflow_uploads:

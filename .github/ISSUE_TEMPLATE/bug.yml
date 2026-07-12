@@ -1,0 +1,11 @@
+name: Bug report
+description: Report a reproducible AssetFlow defect
+body:
+  - type: textarea
+    id: description
+    attributes: { label: Description }
+    validations: { required: true }
+  - type: textarea
+    id: steps
+    attributes: { label: Reproduction steps }
+    validations: { required: true }

@@ -1,0 +1,546 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum RoleName {
+  ADMIN
+  ASSET_MANAGER
+  DEPARTMENT_HEAD
+  EMPLOYEE
+  AUDITOR
+}
+
+enum RecordStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AssetStatus {
+  AVAILABLE
+  ALLOCATED
+  RESERVED
+  UNDER_MAINTENANCE
+  LOST
+  RETIRED
+  DISPOSED
+}
+
+enum AssetCondition {
+  NEW
+  EXCELLENT
+  GOOD
+  FAIR
+  DAMAGED
+  UNUSABLE
+}
+
+enum AllocationStatus {
+  ACTIVE
+  RETURNED
+  TRANSFERRED
+  CANCELLED
+}
+
+enum TransferStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
+
+enum ReturnStatus {
+  REQUESTED
+  INSPECTION
+  ACCEPTED
+  CANCELLED
+}
+
+enum BookingStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum MaintenanceStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  TECHNICIAN_ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AuditStatus {
+  DRAFT
+  SCHEDULED
+  IN_PROGRESS
+  REVIEW
+  CLOSED
+  CANCELLED
+}
+
+enum AuditResult {
+  PENDING
+  VERIFIED
+  MISSING
+  DAMAGED
+}
+
+enum DiscrepancyStatus {
+  OPEN
+  CONFIRMED
+  RESOLVED
+}
+
+enum Severity {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  email        String     @unique @db.Citext
+  passwordHash String
+  failedLogins Int        @default(0)
+  lockedUntil  DateTime?  @db.Timestamptz(3)
+  employee     Employee?
+  roles        UserRole[]
+  sessions     Session[]
+  passwordResetTokens PasswordResetToken[]
+  createdAt    DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime   @updatedAt @db.Timestamptz(3)
+}
+model PasswordResetToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  tokenHash String   @unique
+  expiresAt DateTime @db.Timestamptz(3)
+  usedAt    DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, expiresAt])
+}
+
+model Session {
+  id           String   @id @default(uuid()) @db.Uuid
+  sessionToken String   @unique
+  userId       String   @db.Uuid
+  expires      DateTime @db.Timestamptz(3)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime @db.Timestamptz(3)
+
+  @@unique([identifier, token])
+}
+
+model Role {
+  id    String     @id @default(uuid()) @db.Uuid
+  name  RoleName   @unique
+  users UserRole[]
+}
+
+model UserRole {
+  userId       String   @db.Uuid
+  roleId       String   @db.Uuid
+  assignedById String?  @db.Uuid
+  reason       String?
+  assignedAt   DateTime @default(now()) @db.Timestamptz(3)
+  user         User     @relation(fields: [userId], references: [id])
+  role         Role     @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId])
+}
+
+model Employee {
+  id                  String               @id @default(uuid()) @db.Uuid
+  userId              String               @unique @db.Uuid
+  employeeNumber      String?              @unique
+  name                String
+  departmentId        String?              @db.Uuid
+  managerId           String?              @db.Uuid
+  phone               String?
+  joiningDate         DateTime?            @db.Date
+  status              RecordStatus         @default(ACTIVE)
+  user                User                 @relation(fields: [userId], references: [id])
+  department          Department?          @relation("DepartmentEmployees", fields: [departmentId], references: [id])
+  manager             Employee?            @relation("EmployeeManager", fields: [managerId], references: [id])
+  reports             Employee[]           @relation("EmployeeManager")
+  headedDepartments   Department[]         @relation("DepartmentHead")
+  allocations         Allocation[]
+  transfersRequested  TransferRequest[]    @relation("TransferRequester")
+  transfersProposed   TransferRequest[]    @relation("ProposedHolder")
+  returns             ReturnRequest[]
+  bookings            ResourceBooking[]
+  maintenanceRaised   MaintenanceRequest[] @relation("MaintenanceRaised")
+  maintenanceAssigned MaintenanceRequest[] @relation("MaintenanceTech")
+  notifications       Notification[]
+  auditAssignments    AuditAssignment[]
+  auditLines          AuditLine[]
+  createdAt           DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime             @updatedAt @db.Timestamptz(3)
+
+  @@index([departmentId, status])
+}
+
+model Department {
+  id          String            @id @default(uuid()) @db.Uuid
+  name        String
+  code        String            @unique
+  description String?
+  parentId    String?           @db.Uuid
+  headId      String?           @db.Uuid
+  status      RecordStatus      @default(ACTIVE)
+  parent      Department?       @relation("DepartmentTree", fields: [parentId], references: [id])
+  children    Department[]      @relation("DepartmentTree")
+  head        Employee?         @relation("DepartmentHead", fields: [headId], references: [id])
+  employees   Employee[]        @relation("DepartmentEmployees")
+  assets      Asset[]
+  allocations Allocation[]
+  bookings    ResourceBooking[]
+  auditCycles AuditCycle[]
+
+  @@index([status])
+}
+
+model AssetCategory {
+  id          String                        @id @default(uuid()) @db.Uuid
+  name        String
+  code        String                        @unique
+  description String?
+  status      RecordStatus                  @default(ACTIVE)
+  attributes  CategoryAttributeDefinition[]
+  assets      Asset[]
+}
+
+model CategoryAttributeDefinition {
+  id         String        @id @default(uuid()) @db.Uuid
+  categoryId String        @db.Uuid
+  name       String
+  code       String
+  fieldType  String
+  required   Boolean       @default(false)
+  options    Json?
+  category   AssetCategory @relation(fields: [categoryId], references: [id])
+
+  @@unique([categoryId, code])
+}
+
+model Location {
+  id          String       @id @default(uuid()) @db.Uuid
+  name        String
+  code        String       @unique
+  address     String?
+  status      RecordStatus @default(ACTIVE)
+  assets      Asset[]
+  auditCycles AuditCycle[]
+}
+
+model Asset {
+  id                 String               @id @default(uuid()) @db.Uuid
+  tag                String               @unique
+  name               String
+  serialNumber       String?
+  categoryId         String               @db.Uuid
+  locationId         String               @db.Uuid
+  owningDepartmentId String?              @db.Uuid
+  acquisitionDate    DateTime?            @db.Date
+  acquisitionCost    Decimal?             @db.Decimal(12, 2)
+  condition          AssetCondition       @default(GOOD)
+  status             AssetStatus          @default(AVAILABLE)
+  manufacturer       String?
+  model              String?
+  warrantyExpiry     DateTime?            @db.Date
+  notes              String?
+  shared             Boolean              @default(false)
+  customAttributes   Json                 @default("{}")
+  category           AssetCategory        @relation(fields: [categoryId], references: [id])
+  location           Location             @relation(fields: [locationId], references: [id])
+  owningDepartment   Department?          @relation(fields: [owningDepartmentId], references: [id])
+  attachments        AssetAttachment[]
+  histories          AssetHistory[]
+  allocations        Allocation[]
+  transfers          TransferRequest[]
+  returns            ReturnRequest[]
+  maintenance        MaintenanceRequest[]
+  bookings           ResourceBooking[]
+  auditLines         AuditLine[]
+  createdAt          DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime             @updatedAt @db.Timestamptz(3)
+
+  @@index([categoryId, status])
+  @@index([locationId])
+  @@index([serialNumber])
+}
+
+model AssetAttachment {
+  id         String   @id @default(uuid()) @db.Uuid
+  assetId    String   @db.Uuid
+  name       String
+  mimeType   String
+  size       Int
+  storageKey String
+  asset      Asset    @relation(fields: [assetId], references: [id])
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+}
+
+model AssetHistory {
+  id             String       @id @default(uuid()) @db.Uuid
+  assetId        String       @db.Uuid
+  previousStatus AssetStatus?
+  newStatus      AssetStatus
+  actorId        String?      @db.Uuid
+  reason         String
+  relatedType    String?
+  relatedId      String?      @db.Uuid
+  asset          Asset        @relation(fields: [assetId], references: [id])
+  createdAt      DateTime     @default(now()) @db.Timestamptz(3)
+
+  @@index([assetId, createdAt])
+}
+
+model Allocation {
+  id                 String           @id @default(uuid()) @db.Uuid
+  assetId            String           @db.Uuid
+  employeeId         String?          @db.Uuid
+  departmentId       String?          @db.Uuid
+  status             AllocationStatus @default(ACTIVE)
+  allocationDate     DateTime         @default(now()) @db.Timestamptz(3)
+  expectedReturnDate DateTime?        @db.Timestamptz(3)
+  actualReturnDate   DateTime?        @db.Timestamptz(3)
+  purpose            String
+  conditionAtIssue   AssetCondition
+  accessories        String?
+  notes              String?
+  overdue            Boolean          @default(false)
+  asset              Asset            @relation(fields: [assetId], references: [id])
+  employee           Employee?        @relation(fields: [employeeId], references: [id])
+  department         Department?      @relation(fields: [departmentId], references: [id])
+  returns            ReturnRequest[]
+  createdAt          DateTime         @default(now()) @db.Timestamptz(3)
+
+  @@index([expectedReturnDate, status])
+}
+
+model TransferRequest {
+  id               String             @id @default(uuid()) @db.Uuid
+  assetId          String             @db.Uuid
+  requesterId      String             @db.Uuid
+  proposedHolderId String             @db.Uuid
+  status           TransferStatus     @default(REQUESTED)
+  reason           String
+  requiredBy       DateTime?          @db.Timestamptz(3)
+  notes            String?
+  approvedById     String?            @db.Uuid
+  approvedAt       DateTime?          @db.Timestamptz(3)
+  completedAt      DateTime?          @db.Timestamptz(3)
+  asset            Asset              @relation(fields: [assetId], references: [id])
+  requester        Employee           @relation("TransferRequester", fields: [requesterId], references: [id])
+  proposedHolder   Employee           @relation("ProposedHolder", fields: [proposedHolderId], references: [id])
+  approvals        TransferApproval[]
+  createdAt        DateTime           @default(now()) @db.Timestamptz(3)
+
+  @@index([status])
+}
+
+model TransferApproval {
+  id         String          @id @default(uuid()) @db.Uuid
+  transferId String          @db.Uuid
+  approverId String          @db.Uuid
+  decision   TransferStatus
+  notes      String?
+  transfer   TransferRequest @relation(fields: [transferId], references: [id])
+  createdAt  DateTime        @default(now()) @db.Timestamptz(3)
+}
+
+model ReturnRequest {
+  id                  String          @id @default(uuid()) @db.Uuid
+  assetId             String          @db.Uuid
+  allocationId        String          @db.Uuid
+  employeeId          String          @db.Uuid
+  status              ReturnStatus    @default(REQUESTED)
+  proposedReturnDate  DateTime?       @db.Timestamptz(3)
+  actualReturnDate    DateTime?       @db.Timestamptz(3)
+  reportedCondition   AssetCondition
+  verifiedCondition   AssetCondition?
+  conditionNotes      String?
+  accessoriesReturned String?
+  missingAccessories  String?
+  newLocationId       String?         @db.Uuid
+  followUpAction      String?
+  asset               Asset           @relation(fields: [assetId], references: [id])
+  allocation          Allocation      @relation(fields: [allocationId], references: [id])
+  employee            Employee        @relation(fields: [employeeId], references: [id])
+  createdAt           DateTime        @default(now()) @db.Timestamptz(3)
+}
+
+model ResourceBooking {
+  id            String        @id @default(uuid()) @db.Uuid
+  resourceId    String        @db.Uuid
+  bookedById    String        @db.Uuid
+  departmentId  String?       @db.Uuid
+  startTime     DateTime      @db.Timestamptz(3)
+  endTime       DateTime      @db.Timestamptz(3)
+  purpose       String
+  attendeeCount Int?
+  notes         String?
+  status        BookingStatus @default(UPCOMING)
+  resource      Asset         @relation(fields: [resourceId], references: [id])
+  bookedBy      Employee      @relation(fields: [bookedById], references: [id])
+  department    Department?   @relation(fields: [departmentId], references: [id])
+  createdAt     DateTime      @default(now()) @db.Timestamptz(3)
+
+  @@index([resourceId, startTime, endTime])
+}
+
+model MaintenanceRequest {
+  id               String            @id @default(uuid()) @db.Uuid
+  assetId          String            @db.Uuid
+  raisedById       String            @db.Uuid
+  technicianId     String?           @db.Uuid
+  issueDescription String
+  priority         Priority          @default(MEDIUM)
+  status           MaintenanceStatus @default(PENDING)
+  approvalNotes    String?
+  rejectionReason  String?
+  resolutionNotes  String?
+  completionDate   DateTime?         @db.Timestamptz(3)
+  finalCondition   AssetCondition?
+  operationalCost  Decimal?          @db.Decimal(12, 2)
+  asset            Asset             @relation(fields: [assetId], references: [id])
+  raisedBy         Employee          @relation("MaintenanceRaised", fields: [raisedById], references: [id])
+  technician       Employee?         @relation("MaintenanceTech", fields: [technicianId], references: [id])
+  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime          @updatedAt @db.Timestamptz(3)
+
+  @@index([status, priority])
+}
+
+model AuditCycle {
+  id           String            @id @default(uuid()) @db.Uuid
+  name         String
+  scopeType    String
+  departmentId String?           @db.Uuid
+  locationId   String?           @db.Uuid
+  startDate    DateTime          @db.Timestamptz(3)
+  endDate      DateTime          @db.Timestamptz(3)
+  status       AuditStatus       @default(DRAFT)
+  notes        String?
+  department   Department?       @relation(fields: [departmentId], references: [id])
+  location     Location?         @relation(fields: [locationId], references: [id])
+  assignments  AuditAssignment[]
+  lines        AuditLine[]
+  createdAt    DateTime          @default(now()) @db.Timestamptz(3)
+
+  @@index([status])
+}
+
+model AuditAssignment {
+  auditId   String     @db.Uuid
+  auditorId String     @db.Uuid
+  audit     AuditCycle @relation(fields: [auditId], references: [id])
+  auditor   Employee   @relation(fields: [auditorId], references: [id])
+
+  @@id([auditId, auditorId])
+  @@index([auditorId])
+}
+
+model AuditLine {
+  id                String            @id @default(uuid()) @db.Uuid
+  auditId           String            @db.Uuid
+  assetId           String            @db.Uuid
+  auditorId         String?           @db.Uuid
+  expectedHolder    String?
+  expectedLocation  String
+  expectedStatus    AssetStatus
+  expectedCondition AssetCondition
+  result            AuditResult       @default(PENDING)
+  actualLocation    String?
+  actualHolder      String?
+  notes             String?
+  verifiedAt        DateTime?         @db.Timestamptz(3)
+  audit             AuditCycle        @relation(fields: [auditId], references: [id])
+  asset             Asset             @relation(fields: [assetId], references: [id])
+  auditor           Employee?         @relation(fields: [auditorId], references: [id])
+  discrepancy       AuditDiscrepancy?
+
+  @@unique([auditId, assetId])
+}
+
+model AuditDiscrepancy {
+  id          String            @id @default(uuid()) @db.Uuid
+  auditLineId String            @unique @db.Uuid
+  reason      String
+  status      DiscrepancyStatus @default(OPEN)
+  resolution  String?
+  auditLine   AuditLine         @relation(fields: [auditLineId], references: [id])
+  createdAt   DateTime          @default(now()) @db.Timestamptz(3)
+}
+
+model Notification {
+  id          String    @id @default(uuid()) @db.Uuid
+  recipientId String    @db.Uuid
+  type        String
+  title       String
+  message     String
+  severity    Severity  @default(INFO)
+  readAt      DateTime? @db.Timestamptz(3)
+  relatedType String?
+  relatedId   String?   @db.Uuid
+  dedupeKey   String?   @unique
+  recipient   Employee  @relation(fields: [recipientId], references: [id])
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([recipientId, readAt])
+}
+
+model ActivityLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  actorId       String?  @db.Uuid
+  action        String
+  entityType    String
+  entityId      String?  @db.Uuid
+  oldValues     Json?
+  newValues     Json?
+  outcome       String   @default("SUCCESS")
+  reason        String?
+  correlationId String?
+  ipAddress     String?
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([entityType, entityId, createdAt])
+}
+
+model OrganizationSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+}
+
+model JobRun {
+  id          String   @id @default(uuid()) @db.Uuid
+  jobName     String
+  dedupeKey   String   @unique
+  completedAt DateTime @default(now()) @db.Timestamptz(3)
+  result      Json?
+}

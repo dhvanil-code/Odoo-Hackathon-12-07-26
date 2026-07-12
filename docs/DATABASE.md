@@ -1,0 +1,3 @@
+# Database
+
+UUID keys and `timestamptz` are used throughout. Historical workflow records are retained rather than cascade-deleted. The initial migration enables `citext`, `pgcrypto`, and `btree_gist`. `one_active_allocation_per_asset` is a partial unique index. `no_overlapping_active_resource_bookings` is a GiST exclusion constraint over `tstzrange(startTime,endTime,'[)')`; cancelled rows do not participate. Later migrations add password-reset storage and database triggers for lifecycle transitions, active allocation recipients, immutable accepted returns, and immutable closed-audit results. Additional indexes cover search and operational queues.
