@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # AssetFlow
 
 Enterprise Asset & Resource Management System for accountable custody, shared-resource scheduling, maintenance, audits, and operational reporting.
@@ -187,3 +188,6 @@ S3 and SMTP require deployment credentials. A live production deployment was not
 ## API, contribution, team, and license
 
 See [API documentation](docs/API.md), [testing](docs/TESTING.md), [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Team metadata is editable in `CITATION.cff`. AssetFlow is MIT licensed.
+=======
+# Odoo-Hackathon-12-07-26
+>>>>>>> 46a1a898b19cd393ef06e1d02882d88f1e6fc34b
