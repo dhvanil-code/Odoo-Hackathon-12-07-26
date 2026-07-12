@@ -5,22 +5,8 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:18-alpine
-        env:
-          {
-            POSTGRES_USER: assetflow,
-            POSTGRES_PASSWORD: assetflow,
-            POSTGRES_DB: assetflow_test,
-          }
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U assetflow -d assetflow_test"
-          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      DATABASE_URL: postgresql://assetflow:assetflow@localhost:5432/assetflow_test
-      DIRECT_URL: postgresql://assetflow:assetflow@localhost:5432/assetflow_test
+      DATABASE_URL: file:./prisma/assetflow-ci.db
       AUTH_SECRET: ci-only-secret-at-least-thirty-two-characters
       AUTH_URL: http://localhost:3000
       APP_URL: http://localhost:3000
@@ -28,7 +14,7 @@ jobs:
       UPLOAD_DIR: ./storage/uploads
       CRON_SECRET: ci-worker-secret
       RUN_DB_TESTS: "true"
-      TEST_DATABASE_URL: postgresql://assetflow:assetflow@localhost:5432/assetflow_test
+      TEST_DATABASE_URL: file:./prisma/assetflow-ci.db
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

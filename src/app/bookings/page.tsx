@@ -65,7 +65,7 @@ export default async function Bookings({
         <PageHead
           eyebrow="Shared resources"
           title="Booking calendar"
-          description="PostgreSQL enforces conflict-free half-open intervals: [start, end)."
+          description="Conflict-free half-open booking intervals: [start, end)."
           action={
             <ActionForm
               label="+ Book a resource"

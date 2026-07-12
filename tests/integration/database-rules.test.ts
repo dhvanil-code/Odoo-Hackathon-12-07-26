@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { PrismaClient } from "@prisma/client";
 
 const enabled = process.env.RUN_DB_TESTS === "true";
-describe.skipIf(!enabled)("PostgreSQL business constraints", () => {
+describe.skipIf(!enabled)("SQLite business constraints", () => {
   let db: PrismaClient;
   let employeeId = "";
   let assetId = "";

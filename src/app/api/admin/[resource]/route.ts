@@ -141,44 +141,70 @@ export async function POST(
           "Asset registration permission is required.",
         );
       const value = input as z.infer<typeof schemas.assets>;
-      const created = await db.$transaction(
-        async (tx) => {
-          await tx.$executeRaw`SELECT pg_advisory_xact_lock(413378)`;
-          const last = await tx.asset.findFirst({
-            orderBy: { tag: "desc" },
-            select: { tag: true },
-          });
-          const number = Number(last?.tag.match(/(\d+)$/)?.[1] ?? 0) + 1;
-          const tag = `AF-${String(number).padStart(4, "0")}`;
-          const asset = await tx.asset.create({
-            data: {
-              ...value,
-              customAttributes: value.customAttributes as Prisma.InputJsonValue,
-              tag,
-              status: "AVAILABLE",
-            },
-          });
-          await tx.assetHistory.create({
-            data: {
-              assetId: asset.id,
-              newStatus: "AVAILABLE",
-              actorId: actor.userId,
-              reason: "Asset registered",
-            },
-          });
-          await tx.activityLog.create({
-            data: {
-              actorId: actor.userId,
-              action: "ASSET_CREATED",
-              entityType: "Asset",
-              entityId: asset.id,
-              newValues: { tag, name: asset.name },
-            },
-          });
-          return asset;
-        },
-        { isolationLevel: "Serializable" },
-      );
+      const created = await db.$transaction(async (tx) => {
+        const [category, location, department] = await Promise.all([
+          tx.assetCategory.findUnique({
+            where: { id: value.categoryId },
+            select: { status: true },
+          }),
+          tx.location.findUnique({
+            where: { id: value.locationId },
+            select: { status: true },
+          }),
+          value.owningDepartmentId
+            ? tx.department.findUnique({
+                where: { id: value.owningDepartmentId },
+                select: { status: true },
+              })
+            : null,
+        ]);
+        if (!category || category.status !== "ACTIVE")
+          throw new DomainError(
+            "INVALID_CATEGORY",
+            "Choose an active category.",
+          );
+        if (!location || location.status !== "ACTIVE")
+          throw new DomainError(
+            "INVALID_LOCATION",
+            "Choose an active location.",
+          );
+        if (
+          value.owningDepartmentId &&
+          (!department || department.status !== "ACTIVE")
+        )
+          throw new DomainError(
+            "INVALID_DEPARTMENT",
+            "Choose an active owning department.",
+          );
+        const sequence = await tx.assetTagSequence.create({ data: {} });
+        const tag = `AF-${String(sequence.id).padStart(4, "0")}`;
+        const asset = await tx.asset.create({
+          data: {
+            ...value,
+            customAttributes: value.customAttributes as Prisma.InputJsonValue,
+            tag,
+            status: "AVAILABLE",
+          },
+        });
+        await tx.assetHistory.create({
+          data: {
+            assetId: asset.id,
+            newStatus: "AVAILABLE",
+            actorId: actor.userId,
+            reason: "Asset registered",
+          },
+        });
+        await tx.activityLog.create({
+          data: {
+            actorId: actor.userId,
+            action: "ASSET_CREATED",
+            entityType: "Asset",
+            entityId: asset.id,
+            newValues: { tag, name: asset.name },
+          },
+        });
+        return asset;
+      });
       return Response.json(created, { status: 201 });
     }
     if (resource === "audits") {

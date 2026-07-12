@@ -35,4 +35,23 @@ describe.skipIf(!enabled)("signup security", () => {
     expect(response.status).toBe(201);
     expect((await response.json()).role).toBe("EMPLOYEE");
   });
+  it("returns a conflict instead of a server error for duplicate registration", async () => {
+    const { POST } = await import("@/app/api/signup/route");
+    const email = `duplicate-${Date.now()}@assetflow.local`;
+    const request = () =>
+      POST(
+        new Request("http://localhost/api/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: "Duplicate Signup",
+            email,
+            password: "LongEnoughPassword!",
+          }),
+        }),
+      );
+    const [first, second] = await Promise.all([request(), request()]);
+    const statuses = [first.status, second.status].sort();
+    expect(statuses).toEqual([201, 409]);
+  });
 });

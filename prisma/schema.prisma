@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 enum RoleName {
@@ -115,57 +114,59 @@ enum Severity {
 }
 
 model User {
-  id           String     @id @default(uuid()) @db.Uuid
-  email        String     @unique @db.Citext
-  passwordHash String
-  failedLogins Int        @default(0)
-  lockedUntil  DateTime?  @db.Timestamptz(3)
-  employee     Employee?
-  roles        UserRole[]
-  sessions     Session[]
+  id                  String               @id @default(uuid())
+  email               String               @unique
+  passwordHash        String
+  failedLogins        Int                  @default(0)
+  lockedUntil         DateTime?
+  employee            Employee?
+  roles               UserRole[]
+  sessions            Session[]
   passwordResetTokens PasswordResetToken[]
-  createdAt    DateTime   @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime   @updatedAt @db.Timestamptz(3)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 }
+
 model PasswordResetToken {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
-  tokenHash String   @unique
-  expiresAt DateTime @db.Timestamptz(3)
-  usedAt    DateTime? @db.Timestamptz(3)
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId, expiresAt])
 }
 
 model Session {
-  id           String   @id @default(uuid()) @db.Uuid
+  id           String   @id @default(uuid())
   sessionToken String   @unique
-  userId       String   @db.Uuid
-  expires      DateTime @db.Timestamptz(3)
+  userId       String
+  expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {
   identifier String
   token      String   @unique
-  expires    DateTime @db.Timestamptz(3)
+  expires    DateTime
 
   @@unique([identifier, token])
 }
 
 model Role {
-  id    String     @id @default(uuid()) @db.Uuid
+  id    String     @id @default(uuid())
   name  RoleName   @unique
   users UserRole[]
 }
 
 model UserRole {
-  userId       String   @db.Uuid
-  roleId       String   @db.Uuid
-  assignedById String?  @db.Uuid
+  userId       String
+  roleId       String
+  assignedById String?
   reason       String?
-  assignedAt   DateTime @default(now()) @db.Timestamptz(3)
+  assignedAt   DateTime @default(now())
   user         User     @relation(fields: [userId], references: [id])
   role         Role     @relation(fields: [roleId], references: [id])
 
@@ -173,14 +174,14 @@ model UserRole {
 }
 
 model Employee {
-  id                  String               @id @default(uuid()) @db.Uuid
-  userId              String               @unique @db.Uuid
+  id                  String               @id @default(uuid())
+  userId              String               @unique
   employeeNumber      String?              @unique
   name                String
-  departmentId        String?              @db.Uuid
-  managerId           String?              @db.Uuid
+  departmentId        String?
+  managerId           String?
   phone               String?
-  joiningDate         DateTime?            @db.Date
+  joiningDate         DateTime?
   status              RecordStatus         @default(ACTIVE)
   user                User                 @relation(fields: [userId], references: [id])
   department          Department?          @relation("DepartmentEmployees", fields: [departmentId], references: [id])
@@ -197,19 +198,19 @@ model Employee {
   notifications       Notification[]
   auditAssignments    AuditAssignment[]
   auditLines          AuditLine[]
-  createdAt           DateTime             @default(now()) @db.Timestamptz(3)
-  updatedAt           DateTime             @updatedAt @db.Timestamptz(3)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 
   @@index([departmentId, status])
 }
 
 model Department {
-  id          String            @id @default(uuid()) @db.Uuid
+  id          String            @id @default(uuid())
   name        String
   code        String            @unique
   description String?
-  parentId    String?           @db.Uuid
-  headId      String?           @db.Uuid
+  parentId    String?
+  headId      String?
   status      RecordStatus      @default(ACTIVE)
   parent      Department?       @relation("DepartmentTree", fields: [parentId], references: [id])
   children    Department[]      @relation("DepartmentTree")
@@ -224,7 +225,7 @@ model Department {
 }
 
 model AssetCategory {
-  id          String                        @id @default(uuid()) @db.Uuid
+  id          String                        @id @default(uuid())
   name        String
   code        String                        @unique
   description String?
@@ -234,8 +235,8 @@ model AssetCategory {
 }
 
 model CategoryAttributeDefinition {
-  id         String        @id @default(uuid()) @db.Uuid
-  categoryId String        @db.Uuid
+  id         String        @id @default(uuid())
+  categoryId String
   name       String
   code       String
   fieldType  String
@@ -247,7 +248,7 @@ model CategoryAttributeDefinition {
 }
 
 model Location {
-  id          String       @id @default(uuid()) @db.Uuid
+  id          String       @id @default(uuid())
   name        String
   code        String       @unique
   address     String?
@@ -257,20 +258,20 @@ model Location {
 }
 
 model Asset {
-  id                 String               @id @default(uuid()) @db.Uuid
+  id                 String               @id @default(uuid())
   tag                String               @unique
   name               String
   serialNumber       String?
-  categoryId         String               @db.Uuid
-  locationId         String               @db.Uuid
-  owningDepartmentId String?              @db.Uuid
-  acquisitionDate    DateTime?            @db.Date
-  acquisitionCost    Decimal?             @db.Decimal(12, 2)
+  categoryId         String
+  locationId         String
+  owningDepartmentId String?
+  acquisitionDate    DateTime?
+  acquisitionCost    Decimal?
   condition          AssetCondition       @default(GOOD)
   status             AssetStatus          @default(AVAILABLE)
   manufacturer       String?
   model              String?
-  warrantyExpiry     DateTime?            @db.Date
+  warrantyExpiry     DateTime?
   notes              String?
   shared             Boolean              @default(false)
   customAttributes   Json                 @default("{}")
@@ -285,49 +286,54 @@ model Asset {
   maintenance        MaintenanceRequest[]
   bookings           ResourceBooking[]
   auditLines         AuditLine[]
-  createdAt          DateTime             @default(now()) @db.Timestamptz(3)
-  updatedAt          DateTime             @updatedAt @db.Timestamptz(3)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 
   @@index([categoryId, status])
   @@index([locationId])
   @@index([serialNumber])
 }
 
+model AssetTagSequence {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+}
+
 model AssetAttachment {
-  id         String   @id @default(uuid()) @db.Uuid
-  assetId    String   @db.Uuid
+  id         String   @id @default(uuid())
+  assetId    String
   name       String
   mimeType   String
   size       Int
   storageKey String
   asset      Asset    @relation(fields: [assetId], references: [id])
-  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  createdAt  DateTime @default(now())
 }
 
 model AssetHistory {
-  id             String       @id @default(uuid()) @db.Uuid
-  assetId        String       @db.Uuid
+  id             String       @id @default(uuid())
+  assetId        String
   previousStatus AssetStatus?
   newStatus      AssetStatus
-  actorId        String?      @db.Uuid
+  actorId        String?
   reason         String
   relatedType    String?
-  relatedId      String?      @db.Uuid
+  relatedId      String?
   asset          Asset        @relation(fields: [assetId], references: [id])
-  createdAt      DateTime     @default(now()) @db.Timestamptz(3)
+  createdAt      DateTime     @default(now())
 
   @@index([assetId, createdAt])
 }
 
 model Allocation {
-  id                 String           @id @default(uuid()) @db.Uuid
-  assetId            String           @db.Uuid
-  employeeId         String?          @db.Uuid
-  departmentId       String?          @db.Uuid
+  id                 String           @id @default(uuid())
+  assetId            String
+  employeeId         String?
+  departmentId       String?
   status             AllocationStatus @default(ACTIVE)
-  allocationDate     DateTime         @default(now()) @db.Timestamptz(3)
-  expectedReturnDate DateTime?        @db.Timestamptz(3)
-  actualReturnDate   DateTime?        @db.Timestamptz(3)
+  allocationDate     DateTime         @default(now())
+  expectedReturnDate DateTime?
+  actualReturnDate   DateTime?
   purpose            String
   conditionAtIssue   AssetCondition
   accessories        String?
@@ -337,70 +343,70 @@ model Allocation {
   employee           Employee?        @relation(fields: [employeeId], references: [id])
   department         Department?      @relation(fields: [departmentId], references: [id])
   returns            ReturnRequest[]
-  createdAt          DateTime         @default(now()) @db.Timestamptz(3)
+  createdAt          DateTime         @default(now())
 
   @@index([expectedReturnDate, status])
 }
 
 model TransferRequest {
-  id               String             @id @default(uuid()) @db.Uuid
-  assetId          String             @db.Uuid
-  requesterId      String             @db.Uuid
-  proposedHolderId String             @db.Uuid
+  id               String             @id @default(uuid())
+  assetId          String
+  requesterId      String
+  proposedHolderId String
   status           TransferStatus     @default(REQUESTED)
   reason           String
-  requiredBy       DateTime?          @db.Timestamptz(3)
+  requiredBy       DateTime?
   notes            String?
-  approvedById     String?            @db.Uuid
-  approvedAt       DateTime?          @db.Timestamptz(3)
-  completedAt      DateTime?          @db.Timestamptz(3)
+  approvedById     String?
+  approvedAt       DateTime?
+  completedAt      DateTime?
   asset            Asset              @relation(fields: [assetId], references: [id])
   requester        Employee           @relation("TransferRequester", fields: [requesterId], references: [id])
   proposedHolder   Employee           @relation("ProposedHolder", fields: [proposedHolderId], references: [id])
   approvals        TransferApproval[]
-  createdAt        DateTime           @default(now()) @db.Timestamptz(3)
+  createdAt        DateTime           @default(now())
 
   @@index([status])
 }
 
 model TransferApproval {
-  id         String          @id @default(uuid()) @db.Uuid
-  transferId String          @db.Uuid
-  approverId String          @db.Uuid
+  id         String          @id @default(uuid())
+  transferId String
+  approverId String
   decision   TransferStatus
   notes      String?
   transfer   TransferRequest @relation(fields: [transferId], references: [id])
-  createdAt  DateTime        @default(now()) @db.Timestamptz(3)
+  createdAt  DateTime        @default(now())
 }
 
 model ReturnRequest {
-  id                  String          @id @default(uuid()) @db.Uuid
-  assetId             String          @db.Uuid
-  allocationId        String          @db.Uuid
-  employeeId          String          @db.Uuid
+  id                  String          @id @default(uuid())
+  assetId             String
+  allocationId        String
+  employeeId          String
   status              ReturnStatus    @default(REQUESTED)
-  proposedReturnDate  DateTime?       @db.Timestamptz(3)
-  actualReturnDate    DateTime?       @db.Timestamptz(3)
+  proposedReturnDate  DateTime?
+  actualReturnDate    DateTime?
   reportedCondition   AssetCondition
   verifiedCondition   AssetCondition?
   conditionNotes      String?
   accessoriesReturned String?
   missingAccessories  String?
-  newLocationId       String?         @db.Uuid
+  newLocationId       String?
   followUpAction      String?
   asset               Asset           @relation(fields: [assetId], references: [id])
   allocation          Allocation      @relation(fields: [allocationId], references: [id])
   employee            Employee        @relation(fields: [employeeId], references: [id])
-  createdAt           DateTime        @default(now()) @db.Timestamptz(3)
+  createdAt           DateTime        @default(now())
 }
 
 model ResourceBooking {
-  id            String        @id @default(uuid()) @db.Uuid
-  resourceId    String        @db.Uuid
-  bookedById    String        @db.Uuid
-  departmentId  String?       @db.Uuid
-  startTime     DateTime      @db.Timestamptz(3)
-  endTime       DateTime      @db.Timestamptz(3)
+  id            String        @id @default(uuid())
+  resourceId    String
+  bookedById    String
+  departmentId  String?
+  startTime     DateTime
+  endTime       DateTime
   purpose       String
   attendeeCount Int?
   notes         String?
@@ -408,56 +414,56 @@ model ResourceBooking {
   resource      Asset         @relation(fields: [resourceId], references: [id])
   bookedBy      Employee      @relation(fields: [bookedById], references: [id])
   department    Department?   @relation(fields: [departmentId], references: [id])
-  createdAt     DateTime      @default(now()) @db.Timestamptz(3)
+  createdAt     DateTime      @default(now())
 
   @@index([resourceId, startTime, endTime])
 }
 
 model MaintenanceRequest {
-  id               String            @id @default(uuid()) @db.Uuid
-  assetId          String            @db.Uuid
-  raisedById       String            @db.Uuid
-  technicianId     String?           @db.Uuid
+  id               String            @id @default(uuid())
+  assetId          String
+  raisedById       String
+  technicianId     String?
   issueDescription String
   priority         Priority          @default(MEDIUM)
   status           MaintenanceStatus @default(PENDING)
   approvalNotes    String?
   rejectionReason  String?
   resolutionNotes  String?
-  completionDate   DateTime?         @db.Timestamptz(3)
+  completionDate   DateTime?
   finalCondition   AssetCondition?
-  operationalCost  Decimal?          @db.Decimal(12, 2)
+  operationalCost  Decimal?
   asset            Asset             @relation(fields: [assetId], references: [id])
   raisedBy         Employee          @relation("MaintenanceRaised", fields: [raisedById], references: [id])
   technician       Employee?         @relation("MaintenanceTech", fields: [technicianId], references: [id])
-  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
-  updatedAt        DateTime          @updatedAt @db.Timestamptz(3)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   @@index([status, priority])
 }
 
 model AuditCycle {
-  id           String            @id @default(uuid()) @db.Uuid
+  id           String            @id @default(uuid())
   name         String
   scopeType    String
-  departmentId String?           @db.Uuid
-  locationId   String?           @db.Uuid
-  startDate    DateTime          @db.Timestamptz(3)
-  endDate      DateTime          @db.Timestamptz(3)
+  departmentId String?
+  locationId   String?
+  startDate    DateTime
+  endDate      DateTime
   status       AuditStatus       @default(DRAFT)
   notes        String?
   department   Department?       @relation(fields: [departmentId], references: [id])
   location     Location?         @relation(fields: [locationId], references: [id])
   assignments  AuditAssignment[]
   lines        AuditLine[]
-  createdAt    DateTime          @default(now()) @db.Timestamptz(3)
+  createdAt    DateTime          @default(now())
 
   @@index([status])
 }
 
 model AuditAssignment {
-  auditId   String     @db.Uuid
-  auditorId String     @db.Uuid
+  auditId   String
+  auditorId String
   audit     AuditCycle @relation(fields: [auditId], references: [id])
   auditor   Employee   @relation(fields: [auditorId], references: [id])
 
@@ -466,10 +472,10 @@ model AuditAssignment {
 }
 
 model AuditLine {
-  id                String            @id @default(uuid()) @db.Uuid
-  auditId           String            @db.Uuid
-  assetId           String            @db.Uuid
-  auditorId         String?           @db.Uuid
+  id                String            @id @default(uuid())
+  auditId           String
+  assetId           String
+  auditorId         String?
   expectedHolder    String?
   expectedLocation  String
   expectedStatus    AssetStatus
@@ -478,7 +484,7 @@ model AuditLine {
   actualLocation    String?
   actualHolder      String?
   notes             String?
-  verifiedAt        DateTime?         @db.Timestamptz(3)
+  verifiedAt        DateTime?
   audit             AuditCycle        @relation(fields: [auditId], references: [id])
   asset             Asset             @relation(fields: [assetId], references: [id])
   auditor           Employee?         @relation(fields: [auditorId], references: [id])
@@ -488,45 +494,45 @@ model AuditLine {
 }
 
 model AuditDiscrepancy {
-  id          String            @id @default(uuid()) @db.Uuid
-  auditLineId String            @unique @db.Uuid
+  id          String            @id @default(uuid())
+  auditLineId String            @unique
   reason      String
   status      DiscrepancyStatus @default(OPEN)
   resolution  String?
   auditLine   AuditLine         @relation(fields: [auditLineId], references: [id])
-  createdAt   DateTime          @default(now()) @db.Timestamptz(3)
+  createdAt   DateTime          @default(now())
 }
 
 model Notification {
-  id          String    @id @default(uuid()) @db.Uuid
-  recipientId String    @db.Uuid
+  id          String    @id @default(uuid())
+  recipientId String
   type        String
   title       String
   message     String
   severity    Severity  @default(INFO)
-  readAt      DateTime? @db.Timestamptz(3)
+  readAt      DateTime?
   relatedType String?
-  relatedId   String?   @db.Uuid
+  relatedId   String?
   dedupeKey   String?   @unique
   recipient   Employee  @relation(fields: [recipientId], references: [id])
-  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  createdAt   DateTime  @default(now())
 
   @@index([recipientId, readAt])
 }
 
 model ActivityLog {
-  id            String   @id @default(uuid()) @db.Uuid
-  actorId       String?  @db.Uuid
+  id            String   @id @default(uuid())
+  actorId       String?
   action        String
   entityType    String
-  entityId      String?  @db.Uuid
+  entityId      String?
   oldValues     Json?
   newValues     Json?
   outcome       String   @default("SUCCESS")
   reason        String?
   correlationId String?
   ipAddress     String?
-  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  createdAt     DateTime @default(now())
 
   @@index([entityType, entityId, createdAt])
 }
@@ -534,13 +540,13 @@ model ActivityLog {
 model OrganizationSetting {
   key       String   @id
   value     Json
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt
 }
 
 model JobRun {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String   @id @default(uuid())
   jobName     String
   dedupeKey   String   @unique
-  completedAt DateTime @default(now()) @db.Timestamptz(3)
+  completedAt DateTime @default(now())
   result      Json?
 }

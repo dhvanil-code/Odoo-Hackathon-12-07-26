@@ -1,3 +1,7 @@
 # Database
 
-UUID keys and `timestamptz` are used throughout. Historical workflow records are retained rather than cascade-deleted. The initial migration enables `citext`, `pgcrypto`, and `btree_gist`. `one_active_allocation_per_asset` is a partial unique index. `no_overlapping_active_resource_bookings` is a GiST exclusion constraint over `tstzrange(startTime,endTime,'[)')`; cancelled rows do not participate. Later migrations add password-reset storage and database triggers for lifecycle transitions, active allocation recipients, immutable accepted returns, and immutable closed-audit results. Additional indexes cover search and operational queues.
+AssetFlow uses SQLite through Prisma. `DATABASE_URL` must be a SQLite file URL, for example `file:./prisma/assetflow.db` for local development.
+
+The active migration history starts with `202607120004_sqlite_baseline`. It creates the normalized workflow schema and SQLite-native partial indexes and triggers for allocation, transfer, booking, lifecycle, return, and audit invariants.
+
+The old PostgreSQL migrations are archived in `prisma/legacy-postgresql-migrations` for reference. They must not be deployed to a SQLite database. Migrating existing production data from PostgreSQL requires a separately planned export, transformation, and import; this repository does not perform destructive cross-database conversion automatically.

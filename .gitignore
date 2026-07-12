@@ -12,3 +12,8 @@ storage/uploads/
 .DS_Store
 *.dump
 .pg-test-password
+prisma/*.db
+prisma/*.db-journal
+prisma/*.db-shm
+prisma/*.db-wal
+*.sqlite

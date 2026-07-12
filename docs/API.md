@@ -5,7 +5,7 @@ All non-public routes require an active Auth.js session and enforce RBAC plus re
 ## Public and account routes
 
 - `GET /api/health` process liveness
-- `GET /api/ready` PostgreSQL readiness
+- `GET /api/ready` SQLite readiness
 - `/api/auth/*` Auth.js credentials/session endpoints
 - `POST /api/signup` Employee-only signup; role fields are rejected
 - `POST /api/password/forgot` rate-limited reset creation

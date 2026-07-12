@@ -3,19 +3,26 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { jsonError } from "@/lib/http";
 import { DomainError } from "@/lib/errors";
+import { Prisma } from "@prisma/client";
 
 const signupSchema = z
   .object({
-    name: z.string().min(2).max(120),
-    email: z.email().transform((value) => value.toLowerCase()),
+    name: z.string().trim().min(2).max(120),
+    email: z.string().trim().toLowerCase().pipe(z.email()),
     password: z.string().min(12).max(128),
-    employeeNumber: z.string().min(2).max(50).optional(),
+    employeeNumber: z.string().trim().min(2).max(50).optional(),
   })
   .strict();
 
 export async function POST(request: Request) {
   try {
-    const raw = await request.json();
+    const raw: unknown = await request.json();
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      throw new DomainError(
+        "INVALID_INPUT",
+        "Provide a valid registration payload.",
+      );
+    }
     for (const forbidden of [
       "role",
       "roles",
@@ -39,8 +46,10 @@ export async function POST(request: Request) {
           "EMAIL_IN_USE",
           "An account already exists for this email.",
         );
-      const role = await tx.role.findUniqueOrThrow({
+      const role = await tx.role.upsert({
         where: { name: "EMPLOYEE" },
+        update: {},
+        create: { name: "EMPLOYEE" },
       });
       const user = await tx.user.create({
         data: {
@@ -71,6 +80,18 @@ export async function POST(request: Request) {
     });
     return Response.json(result, { status: 201 });
   } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return Response.json(
+        {
+          code: "EMAIL_IN_USE",
+          message: "An account already exists for this email.",
+        },
+        { status: 409 },
+      );
+    }
     return jsonError(error);
   }
 }

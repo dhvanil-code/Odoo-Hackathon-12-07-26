@@ -21,33 +21,39 @@ export default async function Assets({
   const filters = await searchParams;
   const page = Math.max(1, Number(filters.page ?? 1) || 1);
   const where: Prisma.AssetWhereInput = {
-    ...(filters.q
-      ? {
-          OR: [
-            { tag: { contains: filters.q, mode: "insensitive" } },
-            { name: { contains: filters.q, mode: "insensitive" } },
-            { serialNumber: { contains: filters.q, mode: "insensitive" } },
-          ],
-        }
-      : {}),
-    ...(filters.status
-      ? { status: filters.status as Prisma.EnumAssetStatusFilter }
-      : {}),
-    ...(filters.category ? { categoryId: filters.category } : {}),
-    ...(!isOrganizationWide(actor)
-      ? {
-          OR: [
-            { owningDepartmentId: actor.departmentId },
+    AND: [
+      ...(filters.q
+        ? [
             {
-              allocations: {
-                some: actor.roles.includes("DEPARTMENT_HEAD")
-                  ? { employee: { departmentId: actor.departmentId } }
-                  : { employeeId: actor.employeeId },
-              },
+              OR: [
+                { tag: { contains: filters.q } },
+                { name: { contains: filters.q } },
+                { serialNumber: { contains: filters.q } },
+              ],
             },
-          ],
-        }
-      : {}),
+          ]
+        : []),
+      ...(filters.status
+        ? [{ status: filters.status as Prisma.EnumAssetStatusFilter }]
+        : []),
+      ...(filters.category ? [{ categoryId: filters.category }] : []),
+      ...(!isOrganizationWide(actor)
+        ? [
+            {
+              OR: [
+                { owningDepartmentId: actor.departmentId },
+                {
+                  allocations: {
+                    some: actor.roles.includes("DEPARTMENT_HEAD")
+                      ? { employee: { departmentId: actor.departmentId } }
+                      : { employeeId: actor.employeeId },
+                  },
+                },
+              ],
+            },
+          ]
+        : []),
+    ],
   };
   const [assets, total, categories, locations, departments] = await Promise.all(
     [
@@ -90,7 +96,7 @@ export default async function Assets({
         <PageHead
           eyebrow="Asset registry"
           title="Assets"
-          description="Searchable PostgreSQL asset directory with current custody and lifecycle state."
+          description="Searchable asset directory with current custody and lifecycle state."
           action={
             canRegister ? (
               <ActionForm
