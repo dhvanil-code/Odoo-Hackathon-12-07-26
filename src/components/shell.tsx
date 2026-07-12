@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { auth } from "@/auth";
 import { SignOutButton } from "@/components/sign-out-button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const nav = [
   [
@@ -131,6 +132,7 @@ export async function Shell({
             <span className="subtle">Search assets, people, or tags…</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <ThemeToggle />
             <Link href="/notifications" aria-label="Notifications">
               <Bell size={18} />
             </Link>
