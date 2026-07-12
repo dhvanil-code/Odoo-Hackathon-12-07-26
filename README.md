@@ -153,6 +153,7 @@ Verified locally on PostgreSQL 18.4:
 - 5/5 authenticated Playwright tests passed, covering every demo account;
 - Prisma validation, Prettier, ESLint, strict TypeScript, worker execution, and production build passed;
 - the persisted scenario test covers allocation conflict, transfer approval/handover, booking overlap/back-to-back slots, maintenance, return, audit discrepancy, closure, and Lost confirmation.
+- a clone of commit `b834430` into an empty directory with no `.env` or `node_modules` passed frozen install, fresh-database migrations, seed, format, lint, types, all 12 database tests, and production build.
 
 Docker Compose configuration is included, but Docker was unavailable on the local verification machine; native PostgreSQL 18 was executed instead. CI uses a PostgreSQL service container.
 
