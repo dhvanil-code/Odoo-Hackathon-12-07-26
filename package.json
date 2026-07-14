@@ -47,7 +47,7 @@
   },
   "devDependencies": {
     "@playwright/test": "1.55.0",
-    "@tailwindcss/postcss": "4.1.12",
+    "@tailwindcss/postcss": "4.3.2",
     "@types/node": "22.17.2",
     "@types/nodemailer": "6.4.17",
     "@types/qrcode": "1.5.5",
